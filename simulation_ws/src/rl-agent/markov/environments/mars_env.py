@@ -94,6 +94,7 @@ class MarsEnv(gym.Env):
         self.steering = 0
         self.throttle = 0
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
+        self.episode_count = 0
         
 
         # Imu Sensor readings
@@ -312,6 +313,7 @@ class MarsEnv(gym.Env):
     
         print('Step:%.2f' % self.steps,
               'Steering:%f' % action[0],
+              'Episode:%f' % self.episode_count,                # Current episode
               'R:%.2f' % reward,                                # Reward
               'DTCP:%f' % self.current_distance_to_checkpoint,  # Distance to Check Point
               'DT:%f' % self.distance_travelled,                # Distance Travelled
@@ -324,6 +326,7 @@ class MarsEnv(gym.Env):
             extra = {
                 'Step': self.steps,
                 'Steering': action[0],
+                'Episode': self.episode_count,
                 'R': reward,
                 'DTCP': self.current_distance_to_checkpoint,
                 'DT': self.distance_travelled,
@@ -417,6 +420,8 @@ class MarsEnv(gym.Env):
                 reward = reward + (-0.5 * (5 - 1.05263 * self.collision_threshold))  # linear fit {{0, 5}, {4.5, 1}
 
             return reward, False
+        else:
+            self.episode_count += 1
         return 0, False
     
         
