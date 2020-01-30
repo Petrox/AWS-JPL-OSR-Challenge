@@ -14,7 +14,7 @@ import sys
 import rospy
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, Pose, Quaternion
-from gazebo_msgs.srv import SetModelState
+from gazebo_msgs.srv import SetModelState, SetModelConfiguration
 from gazebo_msgs.msg import ModelState, ContactsState
 from sensor_msgs.msg import Image as sensor_image
 from sensor_msgs.msg import LaserScan, Imu
@@ -219,6 +219,10 @@ class MarsEnv(gym.Env):
         model_state.twist.angular.y = 0
         model_state.twist.angular.z = 0
         model_state.model_name = 'rover'
+
+        model_config = SetModelConfiguration()
+        model_config.joint_names = ["rocker_left_corner_lb", "rocker_right_corner_rb"]
+        model_config.joint_positions = [0, 0]
 
         self.gazebo_model_state_service(model_state)
 
