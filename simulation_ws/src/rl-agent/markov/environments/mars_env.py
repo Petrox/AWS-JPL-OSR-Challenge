@@ -96,7 +96,7 @@ class MarsEnv(gym.Env):
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
         self.episode_count = 0
         
-        self.distance_travelled_list = []
+        self.distance_travelled_list = [45]
 
         # Imu Sensor readings
         self.max_lin_accel_x = 0
@@ -337,15 +337,16 @@ class MarsEnv(gym.Env):
             avg_imu = 0
     
         print('Step:%.2f' % self.steps,
-              'Steering:%f' % action[0],
-              'Episode:%f' % self.episode_count,                # Current episode
+              'Steering:%.1f' % action[0],
+              'Episode:%.1f' % self.episode_count,                # Current episode
               'R:%.2f' % reward,                                # Reward
-              'DTCP:%f' % self.current_distance_to_checkpoint,  # Distance to Check Point
-              'DT:%f' % self.distance_travelled,                # Distance Travelled
+              'DTCP:%.3f' % self.current_distance_to_checkpoint,  # Distance to Check Point
+              'DT:%.2f' % self.distance_travelled,                # Distance Travelled
+              'DT-Dif:%.3f' % (max(self.distance_travelled_list) - min(self.distance_travelled_list)),
               'CT:%.2f' % self.collision_threshold,             # Collision Threshold
-              'CTCP:%f' % self.closer_to_checkpoint,            # Is closer to checkpoint
-              'PSR: %f' % self.power_supply_range,              # Steps remaining in Episode
-              'IMU: %f' % avg_imu)
+              'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
+              'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
+              'IMU: %.3f' % avg_imu)
 
         try:
             extra = {
@@ -383,10 +384,6 @@ class MarsEnv(gym.Env):
         :return: reward as float
                  done as boolean
         '''
-
-        def soft_reset(reward_val):
-            self.distance_travelled_list = []
-            return reward_val, True
             
         GUIDERAILS_X_MIN = -50
         GUIDERAILS_X_MAX = 3
@@ -394,6 +391,7 @@ class MarsEnv(gym.Env):
         GUIDERAILS_Y_MAX = 7
 
         GOAL_THRESHOLD = 0.5
+        return_reward = 0
 
         if self.steps > 0:
             # Has the Rover reached the destination
@@ -404,38 +402,43 @@ class MarsEnv(gym.Env):
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_y) / 3
                     reward = 10000 / self.steps - (self.distance_travelled * 10) - (avg_imu * 100)
-                    soft_reset(reward)
+                    return_reward = reward
 
             # If it has not reached the check point is it still on the map?
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
-                soft_reset(0)
+                return_reward = -1
             if self.y < (GUIDERAILS_Y_MIN - .45) or self.y > (GUIDERAILS_Y_MAX + .45):
                 print("Rover has left the mission map!")
-                soft_reset(0)
+                return_reward = -1
 
             # Has LIDAR registered a hit
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
-                soft_reset(-100) # No reward
+                return_reward = -100
             
             # Have the gravity sensors registered too much G-force
             if self.collision:
                 print("Rover has collided with an object")
-                soft_reset(-100) # No reward
+                return_reward = -100
             
             # Has the rover reached the max steps
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
-                soft_reset(-1000) # No reward
+                return_reward = -1000
             
             # Has the rover stopped moving?
             self.distance_travelled_list.append(self.distance_travelled)
             if len(self.distance_travelled_list) >= 20:
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
                     self.distance_travelled_list.pop(1)
-                    soft_reset(-100)
+                    print("The rover hasn't moved for too long.")
+                    return_reward = -100
                 self.distance_travelled_list.pop(1)
+
+            if return_reward != 0:
+                self.distance_travelled_list = [45]
+                return return_reward, True
             
 
             # No Episode ending events - continue to calculate reward
