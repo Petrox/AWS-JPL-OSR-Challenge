@@ -431,10 +431,11 @@ class MarsEnv(gym.Env):
             self.distance_travelled_list.append(self.distance_travelled)
             if len(self.distance_travelled_list) >= 20:
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
-                    self.distance_travelled_list.pop(1)
+                    self.distance_travelled_list.pop(0)
                     print("The rover hasn't moved for too long.")
                     return_reward = -100
-                self.distance_travelled_list.pop(1)
+                else:
+                    self.distance_travelled_list.pop(0)
 
             if return_reward != 0:
                 self.distance_travelled_list = [45]
