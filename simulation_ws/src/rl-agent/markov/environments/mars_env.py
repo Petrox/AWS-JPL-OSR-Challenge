@@ -400,7 +400,10 @@ class MarsEnv(gym.Env):
             if self.last_position_x >= CHECKPOINT_X - GOAL_THRESHOLD and self.last_position_x <= CHECKPOINT_X + GOAL_THRESHOLD:
                 if self.last_position_y >= CHECKPOINT_Y - GOAL_THRESHOLD and self.last_position_y <= CHECKPOINT_Y + GOAL_THRESHOLD:
                     print("Congratulations! The rover has reached the checkpoint!")
-                    reward = 10000 / self.steps - (self.distance_travelled * 10) - (self.avg_imu * 100)
+                    avg_imu = 0
+                    if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
+                        avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_y) / 3
+                    reward = 10000 / self.steps - (self.distance_travelled * 10) - (avg_imu * 100)
                     soft_reset(reward)
 
             # If it has not reached the check point is it still on the map?
