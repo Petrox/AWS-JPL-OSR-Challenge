@@ -3,3 +3,7 @@
 **/__pycache__
 .DS_Store
 volumes/
+build/
+install/
+log/
+CMakeLists.txt

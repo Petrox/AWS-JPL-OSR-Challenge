@@ -25,7 +25,8 @@ RUN sudo mv minio /usr/local/bin
 RUN sudo useradd -r minio-user -s /sbin/nologin
 RUN sudo chown minio-user:minio-user /usr/local/bin/minio
 RUN mkdir /data
-RUN sudo chown minio-user:minio-user /data
+RUN mkdir -p /data/minio
+RUN sudo chown minio-user:minio-user /data/minio
 
 # install ELK
 RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
@@ -35,32 +36,8 @@ RUN sudo apt-get install -y default-jdk
 RUN sudo apt-get install -y elasticsearch logstash kibana
 
 # CUDA/CNN
-RUN sudo apt-get install -y nvidia-cuda-toolkit
+#RUN sudo apt-get install -y nvidia-cuda-toolkit
 
 RUN pip3 install matplotlib elasticsearch python-logstash jupyter seaborn jupyter-tensorboard
 
-COPY . /home/ubuntu/catkin_ws/src
-
-RUN /bin/bash -c "source /opt/ros/melodic/setup.bash \
-    && cd /home/ubuntu/catkin_ws/ \
-    && catkin_make \
-    && echo 'source /home/ubuntu/catkin_ws/devel/setup.bash' >> ~/.bashrc \
-    && source /home/ubuntu/catkin_ws/devel/setup.bash"
-
-RUN cd /home/ubuntu/catkin_ws && sudo rosdep fix-permissions && rosdep update && rosdep install --from-paths src --ignore-src --rosdistro=melodic -y
-
-RUN /bin/bash -c "source /opt/ros/melodic/setup.bash \
-    && source /home/ubuntu/catkin_ws/devel/setup.bash \
-    && cd /home/ubuntu/catkin_ws/src/simulation_ws \
-    && ./setup.sh \
-    && cd src \
-    && colcon build \
-    && cd rl-agent \
-    && pip3 install . \
-    && cd .. \
-    && source install/local_setup.sh \
-    && chmod +x /home/ubuntu/catkin_ws/src/run.sh \
-    && chmod +x /home/ubuntu/catkin_ws/src/setup.sh \
-    && chmod +x /home/ubuntu/catkin_ws/src/minio.sh \
-    && chmod +x /home/ubuntu/catkin_ws/src/elk.sh \
-    && chmod +x /home/ubuntu/catkin_ws/src/jupyter.sh"
+RUN mkdir -p /data/logs
