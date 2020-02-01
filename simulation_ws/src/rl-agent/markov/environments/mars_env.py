@@ -129,6 +129,7 @@ class MarsEnv(gym.Env):
 
         # Gazebo model state
         self.gazebo_model_state_service = rospy.ServiceProxy('/gazebo/set_model_state', SetModelState)
+        self.gazebo_model_configuration_service = rospy.ServiceProxy('/gazebo/set_model_configuration', SetModelConfiguration)
         rospy.init_node('rl_coach', anonymous=True)
 
         # Subscribe to ROS topics and register callbacks
@@ -221,7 +222,6 @@ class MarsEnv(gym.Env):
         model_state.twist.angular.z = 0
         model_state.model_name = 'rover'
 
-        model_config = SetModelConfiguration()
         joint_names_list = ["rocker_left_corner_lb", 
                             "rocker_right_corner_rb",
                             "body_rocker_left",
@@ -242,10 +242,10 @@ class MarsEnv(gym.Env):
                             "imu_wheel_rm_joint",
                             "corner_rb_wheel_rb",
                             "imu_wheel_rb_joint"]
-        model_config.joint_names = joint_names_list
-        model_config.joint_positions = [0 for _ in range(len(joint_names_list))]
+        joint_positions_list = [0 for _ in range(len(joint_names_list))]
 
         self.gazebo_model_state_service(model_state)
+        self.gazebo_model_configuration_service(model_name='rover', urdf_param_name='rover_description', joint_names=joint_names_list, joint_positions=joint_positions_list)
 
         self.last_collision_threshold = sys.maxsize
         self.last_position_x = self.x
