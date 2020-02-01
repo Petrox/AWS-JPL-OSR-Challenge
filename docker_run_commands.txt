@@ -1,0 +1,2 @@
+sudo docker build -t awsjpl .
+sudo docker run -e RESOLUTION=1920x949 -p 5900:5900 -p 9000:9000 -p 6080:80 -p 5601:5601 -p 8888:8888 -v /home/jordan/AWS-JPL-OSR-Challenge/volumes/minio:/data --gpus all awsjpl
