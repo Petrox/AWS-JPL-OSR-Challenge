@@ -222,12 +222,8 @@ class MarsEnv(gym.Env):
         model_state.twist.angular.z = 0
         model_state.model_name = 'rover'
 
-<<<<<<< HEAD
         # Names of rover joints to reset (this is all of them)
         joint_names_list = ["rocker_left_corner_lb",
-=======
-        joint_names_list = ["rocker_left_corner_lb", 
->>>>>>> 5d7085d6448ea56262ad091a089592b9dec843da
                             "rocker_right_corner_rb",
                             "body_rocker_left",
                             "body_rocker_right",
@@ -247,10 +243,7 @@ class MarsEnv(gym.Env):
                             "imu_wheel_rm_joint",
                             "corner_rb_wheel_rb",
                             "imu_wheel_rb_joint"]
-<<<<<<< HEAD
         # Angle to reset joints to
-=======
->>>>>>> 5d7085d6448ea56262ad091a089592b9dec843da
         joint_positions_list = [0 for _ in range(len(joint_names_list))]
 
         self.gazebo_model_state_service(model_state)
@@ -341,7 +334,7 @@ class MarsEnv(gym.Env):
 
         # Get average Imu reading
         if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
-            avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_y) / 3
+            avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
         else:
             avg_imu = 0
     
@@ -399,7 +392,7 @@ class MarsEnv(gym.Env):
         GUIDERAILS_Y_MIN = -7
         GUIDERAILS_Y_MAX = 7
 
-        GOAL_THRESHOLD = 0.5
+        GOAL_THRESHOLD = 0.75
         return_reward = 0
 
         if self.steps > 0:
@@ -409,8 +402,9 @@ class MarsEnv(gym.Env):
                     print("Congratulations! The rover has reached the checkpoint!")
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
-                        avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_y) / 3
-                    reward = 10000 / self.steps - (self.distance_travelled * 10) - (avg_imu * 100)
+                        avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
+                    reward = 100000 - (self.steps * 10) - (self.distance_travelled * 100) - (avg_imu * 1000)
+                    print("Final termination reward:", reward)
                     return_reward = reward
 
             # If it has not reached the check point is it still on the map?
@@ -446,6 +440,7 @@ class MarsEnv(gym.Env):
                 else:
                     self.distance_travelled_list.pop(0)
 
+            # Return due to episode ending event
             if return_reward != 0:
                 self.distance_travelled_list = [45]
                 return return_reward, True
