@@ -403,7 +403,7 @@ class MarsEnv(gym.Env):
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    reward = 100000 - (self.steps * 10) - (self.distance_travelled * 100) - (avg_imu * 1000)
+                    reward = 100000 - (self.steps * 100) - (self.distance_travelled * 500) - (avg_imu * 5000)
                     print("Final termination reward:", reward)
                     return_reward = reward
 
@@ -454,7 +454,7 @@ class MarsEnv(gym.Env):
             reward += time_in_world_penalty
 
             # polynomial interpolation {0, 50}, {45, 0}, {12, 20}, {32,3}
-            reward += 2.5 * np.polyval(np.poly1d([-0.00072884291634291634291634,
+            reward += 3 * np.polyval(np.poly1d([-0.00072884291634291634291634,
                                                   0.083631588319088319088319088, 
                                                   -3.39862567987567987567987567, 
                                                   50]), self.current_distance_to_checkpoint)
@@ -465,7 +465,7 @@ class MarsEnv(gym.Env):
 
             #Stay away from collisions
             if self.collision_threshold < 3.8:
-                reward = reward + (-0.5 * (5 - 1.05263 * self.collision_threshold))  # linear fit {{0, 5}, {4.5, 1}
+                reward = reward + (-0.25 * (5 - 1.05263 * self.collision_threshold))  # linear fit {{0, 5}, {4.5, 1}
 
             return reward, False
         else:
