@@ -232,6 +232,7 @@ Open a terminal in the VNC tab, and run the following commands (jupyter is optio
 
 ```
 cd /home/ubuntu/catkin_ws/src/
+./create-dirs.sh
 ./build.sh
 ./minio.sh
 ./elk.sh
@@ -239,11 +240,16 @@ cd /home/ubuntu/catkin_ws/src/
 source setup.sh
 ./run.sh
 ```
+./clean.sh - remove files created by build.sh
 
-* vnc - http://localhost:6080
-* minio (minio/miniokey) - http://localhost:9000
-* kibana - http://localhost:5601
-* jupyter - http://localhost:8888
+./remove-all-from-docker.sh - cleans up docker (run on your host system)  
+**WARNING!** This will remove **ALL** of your Docker containers/images/volumes/networks, it's really only usefull if you want to do a clean build of the awsjpl docker image)
+
+URLS:
+* noVNC - http://localhost:6080
+* Minio - http://localhost:9000 (un/pw: minio/miniokey)
+* Kibana - http://localhost:5601
+* Jupyter - http://localhost:8888
 
 
 
