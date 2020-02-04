@@ -392,7 +392,7 @@ class MarsEnv(gym.Env):
         GUIDERAILS_Y_MIN = -7
         GUIDERAILS_Y_MAX = 7
 
-        GOAL_THRESHOLD = 0.75
+        GOAL_THRESHOLD = 1
         return_reward = 0
 
         if self.steps > 0:
@@ -403,8 +403,8 @@ class MarsEnv(gym.Env):
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    reward = 100000 - (self.steps * 100) - (self.distance_travelled * 500) - (avg_imu * 5000)
-                    print("Final termination reward:", reward)
+                    reward = 100000 - (self.steps * 100) - (self.distance_travelled * 150) - (avg_imu * 1000)
+                    print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
                     return_reward = reward
 
             # If it has not reached the check point is it still on the map?
