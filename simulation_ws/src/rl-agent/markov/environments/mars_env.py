@@ -353,7 +353,7 @@ class MarsEnv(gym.Env):
         try:
             extra = {
                 'Step': self.steps,
-                'Steering': action[0],
+                'Steering': int(action[0]),
                 'Episode': self.episode_count,
                 'R': reward,
                 'DTCP': self.current_distance_to_checkpoint,
