@@ -403,7 +403,7 @@ class MarsEnv(gym.Env):
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    reward = 100000 - (self.steps * 100) - (self.distance_travelled * 150) - (avg_imu * 1000)
+                    reward = 800000 - (self.steps * 100) - (self.distance_travelled * 150) - (avg_imu * 1000)
                     print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
                     return_reward = reward
 
@@ -418,12 +418,12 @@ class MarsEnv(gym.Env):
             # Has LIDAR registered a hit
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
-                return_reward = -100
+                return_reward = -500
             
             # Have the gravity sensors registered too much G-force
             if self.collision:
                 print("Rover has collided with an object")
-                return_reward = -100
+                return_reward = -500
             
             # Has the rover reached the max steps
             if self.power_supply_range < 1:
@@ -436,7 +436,7 @@ class MarsEnv(gym.Env):
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
                     self.distance_travelled_list.pop(0)
                     print("The rover hasn't moved for too long.")
-                    return_reward = -100
+                    return_reward = -500
                 else:
                     self.distance_travelled_list.pop(0)
 

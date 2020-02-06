@@ -16,7 +16,7 @@ from markov import environments
 # Graph Scheduling #
 ####################
 schedule_params = ScheduleParameters()
-schedule_params.improve_steps = TrainingSteps(200000)       #Changing to 100K
+schedule_params.improve_steps = TrainingSteps(1000000)       #Changing to 100K
 schedule_params.steps_between_evaluation_periods = EnvironmentEpisodes(40)
 schedule_params.evaluation_steps = EnvironmentEpisodes(5)
 schedule_params.heatup_steps = EnvironmentSteps(0)
