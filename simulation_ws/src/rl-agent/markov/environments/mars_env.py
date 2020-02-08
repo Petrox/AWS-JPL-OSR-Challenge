@@ -361,7 +361,9 @@ class MarsEnv(gym.Env):
                 'CT': self.collision_threshold,
                 'CTCP': self.closer_to_checkpoint,
                 'PSR': self.power_supply_range,
-                'IMU': avg_imu
+                'IMU': avg_imu,
+                'x': self.x,
+                'y': self.y
             }
             elk_logger.info('reward_function', extra=extra)
         except Exception as err:
@@ -403,7 +405,7 @@ class MarsEnv(gym.Env):
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    reward = 800000 - (self.steps * 100) - (self.distance_travelled * 150) - (avg_imu * 1000)
+                    reward = 80000 - (self.steps * 100) - (self.distance_travelled * 150) - (avg_imu * 1000)
                     print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
                     return_reward = reward
 
