@@ -95,6 +95,7 @@ class MarsEnv(gym.Env):
         self.throttle = 0
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
         self.episode_count = 0
+        self.last_reward = 0
         
         self.distance_travelled_list = [45]
 
@@ -394,10 +395,26 @@ class MarsEnv(gym.Env):
         GUIDERAILS_Y_MIN = -7
         GUIDERAILS_Y_MAX = 7
 
-        GOAL_THRESHOLD = 1
+        GOAL_THRESHOLD = 0.75
         return_reward = 0
 
         if self.steps > 0:
+
+            def pos_reward():
+                reward = 0
+
+                # polynomial interpolation {0, 50}, {45, 0}, {12, 20}, {32,3}
+                reward += np.polyval(np.poly1d([-0.00072884291634291634291634,
+                                                0.083631588319088319088319088, 
+                                                -3.39862567987567987567987567, 
+                                                50]), self.current_distance_to_checkpoint)
+                
+                #Stay away from collisions
+                if self.collision_threshold < 3.8:
+                    reward = reward - (5 - 2.22222 * self.collision_threshold)  # linear fit {{0, 5}, {4.5, 0}}
+                
+                return reward
+
             # Has the Rover reached the destination
             if self.last_position_x >= CHECKPOINT_X - GOAL_THRESHOLD and self.last_position_x <= CHECKPOINT_X + GOAL_THRESHOLD:
                 if self.last_position_y >= CHECKPOINT_Y - GOAL_THRESHOLD and self.last_position_y <= CHECKPOINT_Y + GOAL_THRESHOLD:
@@ -405,32 +422,32 @@ class MarsEnv(gym.Env):
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    reward = 80000 - (self.steps * 100) - (self.distance_travelled * 150) - (avg_imu * 1000)
+                    reward = 300 - (self.steps * .2) - (self.distance_travelled * .15) - (avg_imu)
                     print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
-                    return_reward = reward
+                    return_reward = pos_reward()
 
             # If it has not reached the check point is it still on the map?
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
-                return_reward = -1
+                return_reward = pos_reward()
             if self.y < (GUIDERAILS_Y_MIN - .45) or self.y > (GUIDERAILS_Y_MAX + .45):
                 print("Rover has left the mission map!")
-                return_reward = -1
+                return_reward = pos_reward()
 
             # Has LIDAR registered a hit
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
-                return_reward = -500
+                return_reward = pos_reward()
             
             # Have the gravity sensors registered too much G-force
             if self.collision:
                 print("Rover has collided with an object")
-                return_reward = -500
+                return_reward = pos_reward()
             
             # Has the rover reached the max steps
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
-                return_reward = -1000
+                return_reward = pos_reward()
             
             # Has the rover stopped moving?
             self.distance_travelled_list.append(self.distance_travelled)
@@ -438,7 +455,7 @@ class MarsEnv(gym.Env):
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
                     self.distance_travelled_list.pop(0)
                     print("The rover hasn't moved for too long.")
-                    return_reward = -500
+                    return_reward = pos_reward()
                 else:
                     self.distance_travelled_list.pop(0)
 
@@ -446,30 +463,8 @@ class MarsEnv(gym.Env):
             if return_reward != 0:
                 self.distance_travelled_list = [45]
                 return return_reward, True
-            
 
-            # No Episode ending events - continue to calculate reward
-            reward = 0
-            time_in_world_penalty = -15
-
-            # Deincentivise spending time in the world
-            reward += time_in_world_penalty
-
-            # polynomial interpolation {0, 50}, {45, 0}, {12, 20}, {32,3}
-            reward += 3 * np.polyval(np.poly1d([-0.00072884291634291634291634,
-                                                  0.083631588319088319088319088, 
-                                                  -3.39862567987567987567987567, 
-                                                  50]), self.current_distance_to_checkpoint)
-
-            # Incentivise going closer to checkpoint
-            if self.closer_to_checkpoint:
-                reward += 10
-
-            #Stay away from collisions
-            if self.collision_threshold < 3.8:
-                reward = reward + (-0.25 * (5 - 1.05263 * self.collision_threshold))  # linear fit {{0, 5}, {4.5, 1}
-
-            return reward, False
+            return 0, False
         else:
             self.episode_count += 1
         return 0, False
