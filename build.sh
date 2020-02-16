@@ -1,3 +1,4 @@
+source ~/.bashrc
 source /opt/ros/melodic/setup.bash
 cd /home/ubuntu/catkin_ws/
 catkin_make
