@@ -339,17 +339,17 @@ class MarsEnv(gym.Env):
         else:
             avg_imu = 0
     
-        # print('Step:%.2f' % self.steps,
-        #       'Steering:%.1f' % action[0],
-        #       'Episode:%.1f' % self.episode_count,                # Current episode
-        #       'R:%.2f' % reward,                                # Reward
-        #       'DTCP:%.3f' % self.current_distance_to_checkpoint,  # Distance to Check Point
-        #       'DT:%.2f' % self.distance_travelled,                # Distance Travelled
-        #       'DT-Dif:%.3f' % (max(self.distance_travelled_list) - min(self.distance_travelled_list)),
-        #       'CT:%.2f' % self.collision_threshold,             # Collision Threshold
-        #       'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
-        #       'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
-        #       'IMU: %.3f' % avg_imu)
+        print('Step:%.2f' % self.steps,
+              'Steering:%.1f' % action[0],
+              'Episode:%.1f' % self.episode_count,                # Current episode
+              'R:%.2f' % reward,                                # Reward
+              'DTCP:%.3f' % self.current_distance_to_checkpoint,  # Distance to Check Point
+              'DT:%.2f' % self.distance_travelled,                # Distance Travelled
+              'DT-Dif:%.3f' % (max(self.distance_travelled_list) - min(self.distance_travelled_list)),
+              'CT:%.2f' % self.collision_threshold,             # Collision Threshold
+              'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
+              'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
+              'IMU: %.3f' % avg_imu)
 
         try:
             extra = {
@@ -385,36 +385,23 @@ class MarsEnv(gym.Env):
     Must be returned in order of reward, done
     '''
     def reward_function(self):
+
         '''
         :return: reward as float
                  done as boolean
         '''
+
             
+
         GUIDERAILS_X_MIN = -50
         GUIDERAILS_X_MAX = 3
         GUIDERAILS_Y_MIN = -7
         GUIDERAILS_Y_MAX = 7
 
-        GOAL_THRESHOLD = 0.75
+        GOAL_THRESHOLD = 1
         return_reward = 0
 
         if self.steps > 0:
-
-            def pos_reward():
-                reward = 0
-
-                # polynomial interpolation {0, 50}, {45, 0}, {12, 20}, {32,3}
-                reward += np.polyval(np.poly1d([-0.00072884291634291634291634,
-                                                0.083631588319088319088319088, 
-                                                -3.39862567987567987567987567, 
-                                                50]), self.current_distance_to_checkpoint)
-                
-                #Stay away from collisions
-                if self.collision_threshold < 3.8:
-                    reward = reward - (5 - 2.22222 * self.collision_threshold)  # linear fit {{0, 5}, {4.5, 0}}
-                
-                return reward
-
             # Has the Rover reached the destination
             if self.last_position_x >= CHECKPOINT_X - GOAL_THRESHOLD and self.last_position_x <= CHECKPOINT_X + GOAL_THRESHOLD:
                 if self.last_position_y >= CHECKPOINT_Y - GOAL_THRESHOLD and self.last_position_y <= CHECKPOINT_Y + GOAL_THRESHOLD:
@@ -422,54 +409,84 @@ class MarsEnv(gym.Env):
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
                         avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    reward = 300 - (self.steps * .2) - (self.distance_travelled * .15) - (avg_imu)
+                    steps_bias = 50
+                    dist_bias = 10
+                    imu_bias = 5
+                    reward = self.reward_in_episode - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias)
                     print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
-                    return_reward = pos_reward()
+                    return_reward = reward
 
             # If it has not reached the check point is it still on the map?
+            out_of_bounds_penalty = -0.3
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
-                return_reward = pos_reward()
+                return_reward = self.reward_in_episode * out_of_bounds_penalty
             if self.y < (GUIDERAILS_Y_MIN - .45) or self.y > (GUIDERAILS_Y_MAX + .45):
                 print("Rover has left the mission map!")
-                return_reward = pos_reward()
+                return_reward = self.reward_in_episode * out_of_bounds_penalty
 
             # Has LIDAR registered a hit
+            lidar_crash_penalty = -0.5
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
-                return_reward = pos_reward()
-            
+                return_reward = self.reward_in_episode * lidar_crash_penalty
+
             # Have the gravity sensors registered too much G-force
+            imu_crash_penalty = -0.5
             if self.collision:
                 print("Rover has collided with an object")
-                return_reward = pos_reward()
+                return_reward = self.reward_in_episode * imu_crash_penalty
             
             # Has the rover reached the max steps
+            power_penalty = -0.8
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
-                return_reward = pos_reward()
-            
+                return_reward = self.reward_in_episode * power_penalty
+
             # Has the rover stopped moving?
+            stopped_penalty = -0.5
             self.distance_travelled_list.append(self.distance_travelled)
             if len(self.distance_travelled_list) >= 20:
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
                     self.distance_travelled_list.pop(0)
                     print("The rover hasn't moved for too long.")
-                    return_reward = pos_reward()
+                    return_reward = self.reward_in_episode * stopped_penalty
                 else:
                     self.distance_travelled_list.pop(0)
-
+ 
             # Return due to episode ending event
             if return_reward != 0:
                 self.distance_travelled_list = [45]
                 return return_reward, True
 
-            return 0, False
+            # No Episode ending events - continue to calculate reward
+            reward = 0
+ 
+            # dist 50 = 0, dist 25 = 0.25, dist 0 = 1
+            if self.current_distance_to_checkpoint < 50:
+                distance_reward = ((50 - self.current_distance_to_checkpoint) ^ 2) / 2500
+            else:
+                distance_reward = 0
+
+            # Discount a percentage of the given reward proportional to collision_threshold
+            if self.collision_threshold < 4.5:
+                collision_discount = 0.375 + 0.138889 * self.collision_threshold
+            else:
+                collision_discount = 1
+            reward += (distance_reward * collision_discount)
+ 
+            # Incentivise & deincentivise going closer to checkpoint
+            ctcp_modifier = 0.1 # 10% bonus/penalty
+            if self.closer_to_checkpoint:
+                reward *= (1 + ctcp_modifier)
+            else:
+                reward *= (1 - ctcp_modifier)
+ 
+            return reward, False
         else:
             self.episode_count += 1
         return 0, False
-    
-        
+
     '''
     DO NOT EDIT - Function to receive LIDAR data from a ROSTopic
     '''
