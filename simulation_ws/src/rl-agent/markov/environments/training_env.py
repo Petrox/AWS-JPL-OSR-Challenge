@@ -213,7 +213,7 @@ class RoverTrainingGroundsEnv(gym.Env):
         model_state.twist.angular.z = 0
         model_state.model_name = 'rover'
 
-        # Names of rover joints to reset (this is all of them)
+        # List of joints to reset (this is all of them)
         joint_names_list = ["rocker_left_corner_lb",
                             "rocker_right_corner_rb",
                             "body_rocker_left",

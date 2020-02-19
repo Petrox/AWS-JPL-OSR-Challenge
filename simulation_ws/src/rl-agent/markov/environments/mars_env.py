@@ -51,6 +51,7 @@ MAX_STEPS = 2000
 # Destination Point
 CHECKPOINT_X = -44.25
 CHECKPOINT_Y = -4
+CHECKPOINT_PADDING = .5
 
 # Initial position of the robot
 INITIAL_POS_X = -0.170505086911
@@ -83,7 +84,7 @@ class MarsEnv(gym.Env):
         #self.orientation = None
         self.aws_region = os.environ.get("AWS_REGION", "us-east-1")             # Region for CloudWatch Metrics
         self.reward_in_episode = 0                                              # Global episodic reward variable
-        self.steps = 0                                                          # Global episodic step counter
+        self.steps = 1                                                          # Global episodic step counter
         self.collision_threshold = sys.maxsize                                  # current collision distance
         self.last_collision_threshold = sys.maxsize                             # previous collision distance
         self.collision = False                                                  # Episodic collision detector
@@ -223,7 +224,7 @@ class MarsEnv(gym.Env):
         model_state.twist.angular.z = 0
         model_state.model_name = 'rover'
 
-        # Names of rover joints to reset (this is all of them)
+        # List of joints to reset (this is all of them)
         joint_names_list = ["rocker_left_corner_lb",
                             "rocker_right_corner_rb",
                             "body_rocker_left",
@@ -262,7 +263,8 @@ class MarsEnv(gym.Env):
 
         self.distance_travelled = 0
         self.current_distance_to_checkpoint = INITIAL_DISTANCE_TO_CHECKPOINT
-        self.steps = 0
+        self.steps = 1
+        if self.episode == 20: self.episode = 0
         self.reward_in_episode = 0
         self.collision = False
         self.closer_to_checkpoint = False
@@ -376,7 +378,10 @@ class MarsEnv(gym.Env):
         self.last_position_x = self.x
         self.last_position_y = self.y
 
-
+    def at_destination(self):
+        reached_dest_x = (CHECKPOINT_X - CHECKPOINT_PADDING) <= self.x <= (CHECKPOINT_X + CHECKPOINT_PADDING)
+        reached_dest_y = (CHECKPOINT_Y - CHECKPOINT_PADDING) <= self.y <= (CHECKPOINT_Y + CHECKPOINT_PADDING)
+        return reached_dest_x and reached_dest_y
 
     '''
     EDIT - but do not change the function signature. 

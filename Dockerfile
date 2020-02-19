@@ -1,17 +1,36 @@
 FROM dorowu/ubuntu-desktop-lxde-vnc
 LABEL author="Joe Barbere"
 
-# installing apt packages
-RUN apt-get update && apt-get install -y dirmngr wget curl mlocate tmux htop
+RUN apt update && apt install -y \
+	dirmngr \
+	wget \
+	&& rm -rf /var/lib/apt/lists/*
 
 # adding keys for ROS
 RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
 RUN wget http://packages.osrfoundation.org/gazebo.key -O - | apt-key add -
 
-# installing ROS
-RUN apt-get update && apt-get install -y ros-melodic-desktop-full \
-		wget git nano python-rosinstall python3-colcon-common-extensions python3-pip
+# installing ros
+RUN apt update && apt install -y \
+	python-rosinstall \
+	python3-colcon-common-extensions \
+	python3-pip \
+	ros-melodic-desktop-full \
+	ros-melodic-effort-controllers \
+	&& rm -rf /var/lib/apt/lists/*
+
+# installing additional stuff
+RUN apt update && apt install -y \
+	curl \
+	mlocate \
+	tmux \
+	htop \
+	git \
+	nano \
+	&& rm -rf /var/lib/apt/lists/*
+
+# update ROS dependencies
 RUN rosdep init && rosdep update
 
 # installing colcon bundle tools
@@ -35,7 +54,7 @@ RUN wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key
 RUN echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-6.x.list
 RUN sudo apt-get update
 RUN sudo apt-get install -y default-jdk
-RUN sudo apt-get install -y elasticsearch logstash kibana
+RUN sudo apt-get install -y elasticsearch logstash kibana && rm -rf /var/lib/apt/lists/*
 
 # install additional useful python packages
 RUN pip3 install elasticsearch python-logstash jupyter seaborn jupyter-tensorboard
