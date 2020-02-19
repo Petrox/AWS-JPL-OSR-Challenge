@@ -30,13 +30,16 @@ import logstash
 elk_logger = logging.getLogger('python-logstash-logger')
 elk_logger.addHandler(logstash.LogstashHandler('localhost', 5959, version=1))
 
+from std_srvs.srv import Empty
+
+
 VERSION = "0.0.1"
 TRAINING_IMAGE_WIDTH = 160
 TRAINING_IMAGE_HEIGHT = 120
 TRAINING_IMAGE_SIZE = (TRAINING_IMAGE_WIDTH, TRAINING_IMAGE_HEIGHT)
 
 LIDAR_SCAN_MAX_DISTANCE = 4.5  # Max distance Lidar scanner can measure
-CRASH_DISTANCE = 0.49  # Min distance to obstacle (The LIDAR is in the center of the 1M Rover)
+CRASH_DISTANCE = 0.9  # Min distance to obstacle (The LIDAR is in the center of the 1M Rover)
 
 # Size of the image queue buffer, we want this to be one so that we consume 1 image
 # at a time, but may want to change this as we add more algorithms
@@ -92,7 +95,10 @@ class MarsEnv(gym.Env):
         self.steering = 0
         self.throttle = 0
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
-        self.episode = -1 # set to -1 because there is a throw-away step the very first run
+        self.episode_count = 0
+        self.last_reward = 0
+        
+        self.distance_travelled_list = [45]
 
         # Imu Sensor readings
         self.max_lin_accel_x = 0
@@ -166,7 +172,7 @@ class MarsEnv(gym.Env):
     def reset(self):
         print('Total Episodic Reward=%.2f' % self.reward_in_episode,
               'Total Episodic Steps=%.2f' % self.steps)
-        self.send_reward_to_cloudwatch(self.reward_in_episode)
+        # self.send_reward_to_cloudwatch(self.reward_in_episode)
 
         # Reset global episodic values
         self.reward = None
@@ -249,6 +255,10 @@ class MarsEnv(gym.Env):
         self.last_position_x = self.x
         self.last_position_y = self.y
 
+        reset_world = rospy.ServiceProxy('/gazebo/reset_world', Empty)
+        reset_world()
+
+
         time.sleep(SLEEP_AFTER_RESET_TIME_IN_SECOND)
 
         self.distance_travelled = 0
@@ -327,35 +337,36 @@ class MarsEnv(gym.Env):
 
         # Get average Imu reading
         if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
-            avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_y) / 3
+            avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
         else:
             avg_imu = 0
     
-        if self.steps == 1: self.episode+=1
-        
-        print('Step:%s' % self.steps,
-              'Episode:%s' % self.episode,
-              'Steering:%f' % action[0],
-              'R:%.2f' % reward,                                # Reward
-              'DTCP:%f' % self.current_distance_to_checkpoint,  # Distance to Check Point
-              'DT:%f' % self.distance_travelled,                # Distance Travelled
-              'CT:%.2f' % self.collision_threshold,             # Collision Threshold
-              'CTCP:%f' % self.closer_to_checkpoint,            # Is closer to checkpoint
-              'PSR:%f' % self.power_supply_range,              # Steps remaining in Episode
-              'IMU:%f' % avg_imu)
+        print('Step:%.2f' % self.steps,
+              'Steering:%.1f' % action[0],
+              'Episode:%.1f' % self.episode_count,                # Current episode
+              'Tot_R:%.2f' % self.reward_in_episode,              #Reward in episode
+              'R:%.2f' % reward,                                  # Reward
+              'DTCP:%.3f' % self.current_distance_to_checkpoint,  # Distance to Check Point
+              'DT:%.2f' % self.distance_travelled,                # Distance Travelled
+              'CT:%.2f' % self.collision_threshold,               # Collision Threshold
+              'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
+              'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
+              'IMU: %.3f' % avg_imu)
 
         try:
             extra = {
                 'Step': self.steps,
-                'Episode': self.episode,
-                'Steering': action[0],
+                'Steering': int(action[0]),
+                'Episode': self.episode_count,
                 'R': reward,
                 'DTCP': self.current_distance_to_checkpoint,
                 'DT': self.distance_travelled,
                 'CT': self.collision_threshold,
                 'CTCP': self.closer_to_checkpoint,
                 'PSR': self.power_supply_range,
-                'IMU': avg_imu
+                'IMU': avg_imu,
+                'x': self.x,
+                'y': self.y
             }
             elk_logger.info('reward_function', extra=extra)
         except Exception as err:
@@ -379,154 +390,108 @@ class MarsEnv(gym.Env):
     Must be returned in order of reward, done
     '''
     def reward_function(self):
+
         '''
         :return: reward as float
                  done as boolean
         '''
-        
-        # Corner boundaries of the world (in Meters)
-        STAGE_X_MIN = -44.0
-        STAGE_Y_MIN = -25.0
-        STAGE_X_MAX = 15.0
-        STAGE_Y_MAX = 22.0
-        
-        
-        GUIDERAILS_X_MIN = -46
-        GUIDERAILS_X_MAX = 1
-        GUIDERAILS_Y_MIN = -6
-        GUIDERAILS_Y_MAX = 4
-        
-        
-        # WayPoints to checkpoint
-        WAYPOINT_1_X = -10
-        WAYPOINT_1_Y = -4
-        
-        WAYPOINT_2_X = -17
-        WAYPOINT_2_Y = 3
-        
-        WAYPOINT_3_X = -34
-        WAYPOINT_3_Y = 3
-        
-        # REWARD Multipliers
-        FINISHED_REWARD = 10000
-        WAYPOINT_1_REWARD = 1000
-        WAYPOINT_2_REWARD = 2000
-        WAYPOINT_3_REWARD = 3000
 
-        reward = 0
-        base_reward = 2
-        multiplier = 0
-        done = False
-        
-        
+            
+
+        GUIDERAILS_X_MIN = -50
+        GUIDERAILS_X_MAX = 3
+        GUIDERAILS_Y_MIN = -7
+        GUIDERAILS_Y_MAX = 7
+
+        GOAL_THRESHOLD = 1
+        return_reward = 0
+
         if self.steps > 0:
-            
-            # Check for episode ending events first
-            # ###########################################
-            
-            # Has LIDAR registered a hit
-            if self.collision_threshold <= CRASH_DISTANCE:
-                print("Rover has sustained sideswipe damage")
-                return 0, True # No reward
-            
-            # Have the gravity sensors registered too much G-force
-            if self.collision:
-                print("Rover has collided with an object")
-                return 0, True # No reward
-            
-            # Has the rover reached the max steps
-            if self.power_supply_range < 1:
-                print("Rover's power supply has been drained (MAX Steps reached)")
-                return 0, True # No reward
-            
             # Has the Rover reached the destination
-            if self.at_destination():
-                print("Congratulations! The rover has reached the checkpoint!")
-                multiplier = FINISHED_REWARD
-                reward = (base_reward * multiplier) / self.steps # <-- incentivize to reach checkpoint in fewest steps
-                return reward, True
-            
+            if self.last_position_x >= CHECKPOINT_X - GOAL_THRESHOLD and self.last_position_x <= CHECKPOINT_X + GOAL_THRESHOLD:
+                if self.last_position_y >= CHECKPOINT_Y - GOAL_THRESHOLD and self.last_position_y <= CHECKPOINT_Y + GOAL_THRESHOLD:
+                    print("Congratulations! The rover has reached the checkpoint!")
+                    avg_imu = 0
+                    if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
+                        avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
+                    steps_bias = 50
+                    dist_bias = 10
+                    imu_bias = 5
+                    reward = self.reward_in_episode - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias)
+                    print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
+                    return_reward = reward
+
             # If it has not reached the check point is it still on the map?
+            out_of_bounds_penalty = -0.3
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
-                return 0, True
-                
-                
+                return_reward = self.reward_in_episode * out_of_bounds_penalty
             if self.y < (GUIDERAILS_Y_MIN - .45) or self.y > (GUIDERAILS_Y_MAX + .45):
                 print("Rover has left the mission map!")
-                return 0, True
+                return_reward = self.reward_in_episode * out_of_bounds_penalty
+
+            # Has LIDAR registered a hit
+            lidar_crash_penalty = -0.5
+            if self.collision_threshold <= CRASH_DISTANCE:
+                print("Rover has sustained sideswipe damage")
+                return_reward = self.reward_in_episode * lidar_crash_penalty
+
+            # Have the gravity sensors registered too much G-force
+            imu_crash_penalty = -0.5
+            if self.collision:
+                print("Rover has collided with an object")
+                return_reward = self.reward_in_episode * imu_crash_penalty
             
-            
+            # Has the rover reached the max steps
+            power_penalty = -0.8
+            if self.power_supply_range < 1:
+                print("Rover's power supply has been drained (MAX Steps reached")
+                return_reward = self.reward_in_episode * power_penalty
+
+            # Has the rover stopped moving?
+            stopped_penalty = -0.5
+            self.distance_travelled_list.append(self.distance_travelled)
+            if len(self.distance_travelled_list) >= 20:
+                if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
+                    self.distance_travelled_list.pop(0)
+                    print("The rover hasn't moved for too long.")
+                    return_reward = self.reward_in_episode * stopped_penalty
+                else:
+                    self.distance_travelled_list.pop(0)
+ 
+            # Return due to episode ending event
+            if return_reward != 0:
+                self.distance_travelled_list = [45]
+                return return_reward, True
+
             # No Episode ending events - continue to calculate reward
-            
-            if self.last_position_x <= WAYPOINT_1_X and self.last_position_y <= WAYPOINT_1_Y: # Rover is past the midpoint
-                # Determine if Rover already received one time reward for reaching this waypoint
-                if not self.reached_waypoint_1:  
-                    self.reached_waypoint_1 = True
-                    print("Congratulations! The rover has reached waypoint 1!")
-                    multiplier = 1 
-                    reward = (WAYPOINT_1_REWARD * multiplier)/ self.steps # <-- incentivize to reach way-point in fewest steps
-                    return reward, False
-            
-            if self.last_position_x <= WAYPOINT_2_X and self.last_position_y >= WAYPOINT_2_Y: # Rover is past the midpoint
-                # Determine if Rover already received one time reward for reaching this waypoint
-                if not self.reached_waypoint_2:  
-                    self.reached_waypoint_2 = True
-                    print("Congratulations! The rover has reached waypoint 2!")
-                    multiplier = 1 
-                    reward = (WAYPOINT_2_REWARD * multiplier)/ self.steps # <-- incentivize to reach way-point in fewest steps
-                    return reward, False
-                    
-            if self.last_position_x <= WAYPOINT_3_X and self.last_position_y >= WAYPOINT_3_Y: # Rover is past the midpoint
-                # Determine if Rover already received one time reward for reaching this waypoint
-                if not self.reached_waypoint_3:  
-                    self.reached_waypoint_3 = True
-                    print("Congratulations! The rover has reached waypoint 3!")
-                    multiplier = 1 
-                    reward = (WAYPOINT_3_REWARD * multiplier)/ self.steps # <-- incentivize to reach way-point in fewest steps
-                    return reward, False      
-            
-            # To reach this point in the function the Rover has either not yet reached the way-points OR has already gotten the one time reward for reaching the waypoint(s)
-               
-            # multiply the reward based on the Rover's proximity to the Checkpoint
-            waypoint_interval = INITIAL_DISTANCE_TO_CHECKPOINT / 5 
-           
-            marker = [waypoint_interval,(waypoint_interval * 2),(waypoint_interval * 3),(waypoint_interval * 4)]
-                
-            # Get the Base multiplier
-            if self.current_distance_to_checkpoint <= marker[0]:
-                multiplier = 5
-            elif self.current_distance_to_checkpoint <= marker[1] and self.current_distance_to_checkpoint > marker[0]:
-                multiplier = 4
-            elif self.current_distance_to_checkpoint <= marker[2] and self.current_distance_to_checkpoint > marker[1]:
-                multiplier = 3
-            elif self.current_distance_to_checkpoint <= marker[3] and self.current_distance_to_checkpoint > marker[2]:
-                multiplier = 2
+            reward = 0
+ 
+            # dist 50 = 0, dist 25 = 0.25, dist 0 = 1
+            if self.current_distance_to_checkpoint < 50:
+                distance_reward = ((50 - self.current_distance_to_checkpoint) ** 2) / 2500
             else:
-                multiplier = 1
-            
-            # Incentivize the rover to stay away from objects
-            if self.collision_threshold >= 2.0:      # very safe distance
-                multiplier = multiplier + 1
-            elif self.collision_threshold < 2.0 and self.collision_threshold >= 1.5: # pretty safe
-                multiplier = multiplier + .5
-            elif self.collision_threshold < 1.5 and self.collision_threshold >= 1.0: # just enough time to turn
-                multiplier = multiplier + .25
+                distance_reward = 0
+
+            # Discount a percentage of the given reward proportional to collision_threshold
+            if self.collision_threshold < 4.5:
+                collision_discount = 0.375 + 0.138889 * self.collision_threshold
             else:
-                multiplier = multiplier # probably going to hit something and get a zero reward
-            
-            # Incentize the rover to move towards the Checkpoint and not away from the checkpoint
-            if not self.closer_to_checkpoint:
-                if multiplier > 0:
-                    # Cut the multiplier in half
-                    multiplier = multiplier/2
-                    
-            reward = base_reward * multiplier
-            
-        
-        return reward, done
-    
-        
+                collision_discount = 1
+            reward += (distance_reward * collision_discount)
+ 
+            # Incentivise & deincentivise going closer to checkpoint
+            ctcp_modifier = 0.1 # 10% bonus/penalty
+            if self.closer_to_checkpoint:
+                reward *= (1 + ctcp_modifier)
+            else:
+                reward *= (1 - ctcp_modifier)
+ 
+            return reward, False
+        else:
+            self.episode_count += 1
+        return 0, False
+
     '''
     DO NOT EDIT - Function to receive LIDAR data from a ROSTopic
     '''
