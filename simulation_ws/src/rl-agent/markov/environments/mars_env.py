@@ -342,11 +342,11 @@ class MarsEnv(gym.Env):
         print('Step:%.2f' % self.steps,
               'Steering:%.1f' % action[0],
               'Episode:%.1f' % self.episode_count,                # Current episode
-              'R:%.2f' % reward,                                # Reward
+              'Tot_R:%.2f' % self.reward_in_episode,              #Reward in episode
+              'R:%.2f' % reward,                                  # Reward
               'DTCP:%.3f' % self.current_distance_to_checkpoint,  # Distance to Check Point
               'DT:%.2f' % self.distance_travelled,                # Distance Travelled
-              'DT-Dif:%.3f' % (max(self.distance_travelled_list) - min(self.distance_travelled_list)),
-              'CT:%.2f' % self.collision_threshold,             # Collision Threshold
+              'CT:%.2f' % self.collision_threshold,               # Collision Threshold
               'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
               'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
               'IMU: %.3f' % avg_imu)
@@ -464,7 +464,7 @@ class MarsEnv(gym.Env):
  
             # dist 50 = 0, dist 25 = 0.25, dist 0 = 1
             if self.current_distance_to_checkpoint < 50:
-                distance_reward = ((50 - self.current_distance_to_checkpoint) ^ 2) / 2500
+                distance_reward = ((50 - self.current_distance_to_checkpoint) ** 2) / 2500
             else:
                 distance_reward = 0
 
