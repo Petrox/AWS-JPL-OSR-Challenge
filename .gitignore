@@ -9,6 +9,4 @@ log/
 CMakeLists.txt
 run-docker.sh
 build-docker-image.sh
-cuda_9.0.176_384.81_linux.run
-cudnn-9.0-linux-x64-v7.6.5.32.tgz
 mnist.h5
