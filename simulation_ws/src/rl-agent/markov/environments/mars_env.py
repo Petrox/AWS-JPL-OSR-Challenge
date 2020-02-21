@@ -84,7 +84,7 @@ class MarsEnv(gym.Env):
         #self.orientation = None
         self.aws_region = os.environ.get("AWS_REGION", "us-east-1")             # Region for CloudWatch Metrics
         self.reward_in_episode = 0                                              # Global episodic reward variable
-        self.steps = 1                                                          # Global episodic step counter
+        self.steps = 0                                                          # Global episodic step counter
         self.collision_threshold = sys.maxsize                                  # current collision distance
         self.last_collision_threshold = sys.maxsize                             # previous collision distance
         self.collision = False                                                  # Episodic collision detector
@@ -263,8 +263,7 @@ class MarsEnv(gym.Env):
 
         self.distance_travelled = 0
         self.current_distance_to_checkpoint = INITIAL_DISTANCE_TO_CHECKPOINT
-        self.steps = 1
-        if self.episode == 20: self.episode = 0
+        self.steps = 0
         self.reward_in_episode = 0
         self.collision = False
         self.closer_to_checkpoint = False
@@ -358,7 +357,8 @@ class MarsEnv(gym.Env):
                 'Step': self.steps,
                 'Steering': int(action[0]),
                 'Episode': self.episode_count,
-                'R': reward,
+                'R': float(reward),
+                'Tot_r': self.reward_in_episode,
                 'DTCP': self.current_distance_to_checkpoint,
                 'DT': self.distance_travelled,
                 'CT': self.collision_threshold,
@@ -422,7 +422,7 @@ class MarsEnv(gym.Env):
                     return_reward = reward
 
             # If it has not reached the check point is it still on the map?
-            out_of_bounds_penalty = -0.3
+            out_of_bounds_penalty = -0.5
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
                 return_reward = self.reward_in_episode * out_of_bounds_penalty
@@ -481,7 +481,7 @@ class MarsEnv(gym.Env):
             reward += (distance_reward * collision_discount)
  
             # Incentivise & deincentivise going closer to checkpoint
-            ctcp_modifier = 0.1 # 10% bonus/penalty
+            ctcp_modifier = 0.30 # 30% bonus/penalty
             if self.closer_to_checkpoint:
                 reward *= (1 + ctcp_modifier)
             else:
