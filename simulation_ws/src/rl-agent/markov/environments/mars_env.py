@@ -408,21 +408,21 @@ class MarsEnv(gym.Env):
 
         if self.steps > 0:
             # Has the Rover reached the destination
-            if self.last_position_x >= CHECKPOINT_X - GOAL_THRESHOLD and self.last_position_x <= CHECKPOINT_X + GOAL_THRESHOLD:
-                if self.last_position_y >= CHECKPOINT_Y - GOAL_THRESHOLD and self.last_position_y <= CHECKPOINT_Y + GOAL_THRESHOLD:
-                    print("Congratulations! The rover has reached the checkpoint!")
-                    avg_imu = 0
-                    if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
-                        avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                    steps_bias = 50
-                    dist_bias = 10
-                    imu_bias = 5
-                    reward = self.reward_in_episode - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias)
-                    print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
-                    return_reward = reward
+            if self.last_position_x >= CHECKPOINT_X and self.last_position_y >= CHECKPOINT_Y:
+                print("Congratulations! The rover has reached the checkpoint!")
+                avg_imu = 0
+                if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
+                    avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
+                steps_bias = 50
+                dist_bias = 10
+                imu_bias = 5
+                # Give a flat termination reward, and make all previous steps irrelevant
+                reward = 250 - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias) - self.reward_in_episode
+                print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
+                return_reward = reward
 
             # If it has not reached the check point is it still on the map?
-            out_of_bounds_penalty = -0.5
+            out_of_bounds_penalty = 0
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
                 return_reward = self.reward_in_episode * out_of_bounds_penalty
@@ -431,25 +431,25 @@ class MarsEnv(gym.Env):
                 return_reward = self.reward_in_episode * out_of_bounds_penalty
 
             # Has LIDAR registered a hit
-            lidar_crash_penalty = -0.5
+            lidar_crash_penalty = 0
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
                 return_reward = self.reward_in_episode * lidar_crash_penalty
 
             # Have the gravity sensors registered too much G-force
-            imu_crash_penalty = -0.5
+            imu_crash_penalty = 0
             if self.collision:
                 print("Rover has collided with an object")
                 return_reward = self.reward_in_episode * imu_crash_penalty
             
             # Has the rover reached the max steps
-            power_penalty = -0.8
+            power_penalty = 0
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
                 return_reward = self.reward_in_episode * power_penalty
 
             # Has the rover stopped moving?
-            stopped_penalty = -0.5
+            stopped_penalty = 0
             self.distance_travelled_list.append(self.distance_travelled)
             if len(self.distance_travelled_list) >= 20:
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
