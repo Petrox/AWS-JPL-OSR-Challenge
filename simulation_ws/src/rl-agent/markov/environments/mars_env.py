@@ -408,19 +408,19 @@ class MarsEnv(gym.Env):
 
         if self.steps > 0:
             # Has the Rover reached the destination
-            if self.last_position_x > CHECKPOINT_X - 0.01 and self.last_position_x <= CHECKPOINT_X
+            if self.last_position_x > CHECKPOINT_X - 0.01 and self.last_position_x <= CHECKPOINT_X:
                 if self.last_position_y <= CHECKPOINT_Y and self.last_position_y > CHECKPOINT_Y - 0.1:
-                print("Congratulations! The rover has reached the checkpoint!")
-                avg_imu = 0
-                if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
-                    avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
-                steps_bias = 0.5
-                dist_bias = 0.5
-                imu_bias = 1
-                # Give a flat termination reward, and make all previous steps irrelevant
-                reward = 1000 - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias) - self.reward_in_episode
-                print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
-                return_reward = reward
+                    print("Congratulations! The rover has reached the checkpoint!")
+                    avg_imu = 0
+                    if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
+                        avg_imu = (self.max_lin_accel_x + self.max_lin_accel_y + self.max_lin_accel_z) / 3
+                    steps_bias = 0.5
+                    dist_bias = 0.5
+                    imu_bias = 1
+                    # Give a flat termination reward, and make all previous steps irrelevant
+                    reward = 1000 - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias) - self.reward_in_episode
+                    print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
+                    return_reward = reward
 
             # If it has not reached the check point is it still on the map?
             out_of_bounds_penalty = 0.0000001
