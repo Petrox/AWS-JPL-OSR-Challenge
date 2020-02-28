@@ -408,7 +408,7 @@ class MarsEnv(gym.Env):
 
         if self.steps > 0:
             # Has the Rover reached the destination
-            if self.last_position_x >= CHECKPOINT_X and self.last_position_y >= CHECKPOINT_Y:
+            if self.last_position_x <= CHECKPOINT_X and self.last_position_y >= CHECKPOINT_Y:
                 print("Congratulations! The rover has reached the checkpoint!")
                 avg_imu = 0
                 if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
@@ -422,7 +422,7 @@ class MarsEnv(gym.Env):
                 return_reward = reward
 
             # If it has not reached the check point is it still on the map?
-            out_of_bounds_penalty = 0
+            out_of_bounds_penalty = 0.001
             if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
                 print("Rover has left the mission map!")
                 return_reward = self.reward_in_episode * out_of_bounds_penalty
@@ -431,25 +431,25 @@ class MarsEnv(gym.Env):
                 return_reward = self.reward_in_episode * out_of_bounds_penalty
 
             # Has LIDAR registered a hit
-            lidar_crash_penalty = 0
+            lidar_crash_penalty = 0.001
             if self.collision_threshold <= CRASH_DISTANCE:
                 print("Rover has sustained sideswipe damage")
                 return_reward = self.reward_in_episode * lidar_crash_penalty
 
             # Have the gravity sensors registered too much G-force
-            imu_crash_penalty = 0
+            imu_crash_penalty = 0.001
             if self.collision:
                 print("Rover has collided with an object")
                 return_reward = self.reward_in_episode * imu_crash_penalty
             
             # Has the rover reached the max steps
-            power_penalty = 0
+            power_penalty = 0.001
             if self.power_supply_range < 1:
                 print("Rover's power supply has been drained (MAX Steps reached")
                 return_reward = self.reward_in_episode * power_penalty
 
             # Has the rover stopped moving?
-            stopped_penalty = 0
+            stopped_penalty = 0.001
             self.distance_travelled_list.append(self.distance_travelled)
             if len(self.distance_travelled_list) >= 20:
                 if max(self.distance_travelled_list) - min(self.distance_travelled_list) < 0.5:
