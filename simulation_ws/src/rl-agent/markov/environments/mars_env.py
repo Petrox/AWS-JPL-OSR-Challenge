@@ -422,15 +422,18 @@ class MarsEnv(gym.Env):
                     print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
                     return_reward = reward
 
-            line = 0
-            for i in range(len(GUIDE_POINTS)):
-                if self.x <= GUIDE_POINTS[i][0]:
-                    line = i
-            num_p1 = (GUIDE_POINTS[line + 1][1] - GUIDE_POINTS[line][1]) * self.x
-            num_p2 = (GUIDE_POINTS[line + 1][0] - GUIDE_POINTS[line][0]) * self.y
-            num_p3 = (GUIDE_POINTS[line + 1][0] * GUIDE_POINTS[line][1]) - (GUIDE_POINTS[line + 1][1] * GUIDE_POINTS[line][0])
-            den = np.sqrt(np.square(GUIDE_POINTS[line + 1][1] - GUIDE_POINTS[line][1]) + np.square(GUIDE_POINTS[line + 1][0] - GUIDE_POINTS[line][0]))
-            distance_from_path = abs(num_p1 - num_p2 + num_p3)/ den
+            try:
+                line = 0
+                for i in range(len(GUIDE_POINTS)):
+                    if self.x <= GUIDE_POINTS[i][0]:
+                        line = i
+                num_p1 = (GUIDE_POINTS[line + 1][1] - GUIDE_POINTS[line][1]) * self.x
+                num_p2 = (GUIDE_POINTS[line + 1][0] - GUIDE_POINTS[line][0]) * self.y
+                num_p3 = (GUIDE_POINTS[line + 1][0] * GUIDE_POINTS[line][1]) - (GUIDE_POINTS[line + 1][1] * GUIDE_POINTS[line][0])
+                den = np.sqrt(np.square(GUIDE_POINTS[line + 1][1] - GUIDE_POINTS[line][1]) + np.square(GUIDE_POINTS[line + 1][0] - GUIDE_POINTS[line][0]))
+                distance_from_path = abs(num_p1 - num_p2 + num_p3)/ den
+            except:
+                pass
             
             # If the rover has left the desired path
             off_path_penalty = 0.0000001
