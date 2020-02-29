@@ -499,6 +499,7 @@ class MarsEnv(gym.Env):
             # else:
             #     collision_discount = 1
             # reward += (distance_reward * collision_discount)
+            reward += distance_reward
             # Incentivise & deincentivise going closer to checkpoint
             ctcp_modifier = 0.30 # 30% bonus/penalty
             if self.closer_to_checkpoint:
