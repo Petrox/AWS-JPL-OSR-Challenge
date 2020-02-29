@@ -396,7 +396,7 @@ class MarsEnv(gym.Env):
                  done as boolean
         '''
 
-            
+        GUIDE_POINTS = [[0, 0], [-9.2, -3.3], [-15.4, -3.5], [-26.1, -4.3], [-36.2, -2.9], [-44.254, -4.05]]
 
         GUIDERAILS_X_MIN = -50
         GUIDERAILS_X_MAX = 3
@@ -421,6 +421,22 @@ class MarsEnv(gym.Env):
                     reward = 1000 - (self.steps / steps_bias) - (self.distance_travelled / dist_bias) - (avg_imu / imu_bias) - self.reward_in_episode
                     print("Final termination reward:", reward, ", score: ", 10000 - self.steps - self.distance_travelled - avg_imu)
                     return_reward = reward
+
+            line = 0
+            for i in range(len(GUIDE_POINTS)):
+                if self.x <= GUIDE_POINTS[i][0]:
+                    line = i
+            num_p1 = (GUIDE_POINTS[line + 1][1] - GUIDE_POINTS[line][1]) * self.x
+            num_p2 = (GUIDE_POINTS[line + 1][0] - GUIDE_POINTS[line][0]) * self.y
+            num_p3 = (GUIDE_POINTS[line + 1][0] * GUIDE_POINTS[line][1]) - (GUIDE_POINTS[line + 1][1] * GUIDE_POINTS[line][0])
+            den = np.sqrt(np.square(GUIDE_POINTS[line + 1][1] - GUIDE_POINTS[line][1]) + np.square(GUIDE_POINTS[line + 1][0] - GUIDE_POINTS[line][0]))
+            distance_from_path = abs(num_p1 - num_p2 + num_p3)/ den
+            
+            # If the rover has left the desired path
+            off_path_penalty = 0.0000001
+            if distance_from_path > 1:
+                print("Rover has left the desired path")
+                return_reward = self.reward_in_episode * off_path_penalty
 
             # If it has not reached the check point is it still on the map?
             out_of_bounds_penalty = 0.0000001
@@ -474,12 +490,12 @@ class MarsEnv(gym.Env):
             else:
                 distance_reward = 0
 
-            # Discount a percentage of the given reward proportional to collision_threshold
-            if self.collision_threshold < 4.5:
-                collision_discount = 0.375 + 0.138889 * self.collision_threshold
-            else:
-                collision_discount = 1
-            reward += (distance_reward * collision_discount)
+            # # Discount a percentage of the given reward proportional to collision_threshold
+            # if self.collision_threshold < 4.5:
+            #     collision_discount = 0.375 + 0.138889 * self.collision_threshold
+            # else:
+            #     collision_discount = 1
+            # reward += (distance_reward * collision_discount)
  
             # Incentivise & deincentivise going closer to checkpoint
             ctcp_modifier = 0.30 # 30% bonus/penalty
