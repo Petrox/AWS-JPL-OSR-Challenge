@@ -350,7 +350,9 @@ class MarsEnv(gym.Env):
               'CT:%.2f' % self.collision_threshold,               # Collision Threshold
               'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
               'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
-              'IMU: %.3f' % avg_imu)
+              'IMU: %.3f' % avg_imu,
+              'x: %.2f' % self.x,
+              'y: %.2f' % self.y)
 
         try:
             extra = {
