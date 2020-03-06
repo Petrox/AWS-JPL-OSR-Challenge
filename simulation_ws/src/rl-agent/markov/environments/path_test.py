@@ -1,15 +1,15 @@
 import numpy as np
 
 GUIDE_POINTS = [[0, 0], [-9.2, -3.3], [-15.4, -3.5], [-26.1, -4.3], [-36.2, -2.9], [-44.255, -4.05], [-48, -4.05]]
-CHECKPOINT_X = -44.25
-CHECKPOINT_Y = -4
-x = -44.2# float(input())
-y = -4# float(input())
+CHECKPOINT_X = -44.255
+CHECKPOINT_Y = -4.05
+x = -44.259999  # float(input())
+y = -4.09999# float(input())
 current_distance_to_checkpoint = np.sqrt(np.square(CHECKPOINT_X - x) + np.square(CHECKPOINT_Y - y))
 print(current_distance_to_checkpoint)
 
-if x > CHECKPOINT_X - 0.01 and x <= CHECKPOINT_X:
-    if y <= CHECKPOINT_Y and y > CHECKPOINT_Y - 0.1:
+if x > CHECKPOINT_X - 0.005 and x <= CHECKPOINT_X + 0.005:
+    if y <= CHECKPOINT_Y + 0.05 and y > CHECKPOINT_Y - 0.05:
         print("success!")
 line = 0
 for i in range(len(GUIDE_POINTS)):

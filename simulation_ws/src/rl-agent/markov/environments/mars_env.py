@@ -399,18 +399,12 @@ class MarsEnv(gym.Env):
         '''
 
         GUIDE_POINTS = [[0, 0], [-9.2, -3.3], [-15.4, -3.5], [-26.1, -4.3], [-36.2, -2.9], [-44.254, -4.05], [-46, -4.05]]
-
-        GUIDERAILS_X_MIN = -50
-        GUIDERAILS_X_MAX = 3
-        GUIDERAILS_Y_MIN = -7
-        GUIDERAILS_Y_MAX = 7
-
         return_reward = 0
 
         if self.steps > 0:
             # Has the Rover reached the destination
-            if self.x > CHECKPOINT_X - 0.01 and self.x <= CHECKPOINT_X:
-                if self.y <= CHECKPOINT_Y and self.y > CHECKPOINT_Y - 0.1:
+            if self.x > CHECKPOINT_X - 0.005 and self.x <= CHECKPOINT_X + 0.005:
+                if self.y <= CHECKPOINT_Y + 0.05 and self.y > CHECKPOINT_Y - 0.05:
                     print("Congratulations! The rover has reached the checkpoint!")
                     avg_imu = 0
                     if self.max_lin_accel_x > 0 or self.max_lin_accel_y > 0 or self.max_lin_accel_z > 0:
@@ -441,15 +435,6 @@ class MarsEnv(gym.Env):
             if distance_from_path > 1:
                 print("Rover has left the desired path")
                 return_reward = self.reward_in_episode * off_path_penalty
-
-            # If it has not reached the check point is it still on the map?
-            out_of_bounds_penalty = -0.001
-            if self.x < (GUIDERAILS_X_MIN - .45) or self.x > (GUIDERAILS_X_MAX + .45):
-                print("Rover has left the mission map!")
-                return_reward = self.reward_in_episode * out_of_bounds_penalty
-            if self.y < (GUIDERAILS_Y_MIN - .45) or self.y > (GUIDERAILS_Y_MAX + .45):
-                print("Rover has left the mission map!")
-                return_reward = self.reward_in_episode * out_of_bounds_penalty
 
             # Has LIDAR registered a hit
             lidar_crash_penalty = -0.001
