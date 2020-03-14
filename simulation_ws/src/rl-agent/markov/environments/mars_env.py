@@ -95,8 +95,6 @@ class MarsEnv(gym.Env):
         self.steering = 0
         self.throttle = 0
         self.power_supply_range = MAX_STEPS                                     # Kill switch (power supply)
-        self.episode_count = 0
-        self.last_reward = 0
         
         self.distance_travelled_list = [45]
 
@@ -341,38 +339,14 @@ class MarsEnv(gym.Env):
             avg_imu = 0
     
         print('Step:%.2f' % self.steps,
-              'Steering:%.1f' % action[0],
-              'Episode:%.1f' % self.episode_count,                # Current episode
-              'Tot_R:%.2f' % self.reward_in_episode,              #Reward in episode
-              'R:%.2f' % reward,                                  # Reward
-              'DTCP:%.3f' % self.current_distance_to_checkpoint,  # Distance to Check Point
-              'DT:%.2f' % self.distance_travelled,                # Distance Travelled
-              'CT:%.2f' % self.collision_threshold,               # Collision Threshold
-              'CTCP:%.1f' % self.closer_to_checkpoint,            # Is closer to checkpoint
-              'PSR: %.1f' % self.power_supply_range,              # Steps remaining in Episode
-              'IMU: %.3f' % avg_imu,
-              'x: %.2f' % self.x,
-              'y: %.2f' % self.y)
-
-        try:
-            extra = {
-                'Step': self.steps,
-                'Steering': int(action[0]),
-                'Episode': self.episode_count,
-                'R': float(reward),
-                'Tot_r': self.reward_in_episode,
-                'DTCP': self.current_distance_to_checkpoint,
-                'DT': self.distance_travelled,
-                'CT': self.collision_threshold,
-                'CTCP': self.closer_to_checkpoint,
-                'PSR': self.power_supply_range,
-                'IMU': avg_imu,
-                'x': self.x,
-                'y': self.y
-            }
-            elk_logger.info('reward_function', extra=extra)
-        except Exception as err:
-            print("logging error: {}".format(err))
+              'Steering:%f' % action[0],
+              'R:%.2f' % reward,                                # Reward
+              'DTCP:%f' % self.current_distance_to_checkpoint,  # Distance to Check Point
+              'DT:%f' % self.distance_travelled,                # Distance Travelled
+              'CT:%.2f' % self.collision_threshold,             # Collision Threshold
+              'CTCP:%f' % self.closer_to_checkpoint,            # Is closer to checkpoint
+              'PSR: %f' % self.power_supply_range,              # Steps remaining in Episode
+              'IMU: %f' % avg_imu)
 
         self.reward = reward
         self.done = done
@@ -430,6 +404,7 @@ class MarsEnv(gym.Env):
                 distance_from_path = abs(num_p1 - num_p2 + num_p3)/ den
             else:
                 distance_from_path = 5
+
             # If the rover has left the desired path
             off_path_penalty = -0.001
             if distance_from_path > 1:
@@ -488,8 +463,6 @@ class MarsEnv(gym.Env):
             reward += distance_reward_2
  
             return reward, False
-        else:
-            self.episode_count += 1
         return 0, False
 
     '''
